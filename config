@@ -1,0 +1,99 @@
+
+
+### 1. `config/dataset.yaml`
+
+This file defines global data parameters.
+
+```yaml
+# config/dataset.yaml
+dataset_name: "CattleEyeView"
+data_path: "./data/CattleEyeView"
+img_size: 640
+batch_size: 32
+workers: 8
+
+# Task-specific definitions
+tasks:
+  detection: True
+  segmentation: True
+  pose: True
+
+# Augmentation pipeline
+augmentations:
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+  degrees: 0.0
+  translate: 0.1
+  scale: 0.5
+
+```
+
+---
+
+### 2. `config/experiments/M3.yaml`
+
+This file defines your **M3** configuration (the best-performing setup with both ECA and GradNorm). You can create variants `M0.yaml`, `M1.yaml`, and `M2.yaml` by simply setting the `use_eca` and `use_gradnorm` flags to `false`.
+
+```yaml
+# config/experiments/M3.yaml
+experiment_name: "M3_Final_Ablation"
+
+model:
+  backbone: "CSPDarknet"
+  use_eca: True               # Enabled for M3
+  use_gradnorm: True          # Enabled for M3
+  
+  heads:
+    det_head: "yolov8_head"
+    seg_head: "mask_rcnn_head"
+    pose_head: "keypoint_head"
+    num_keypoints: 24
+
+training:
+  optimizer: "AdamW"
+  lr0: 0.001
+  momentum: 0.937
+  weight_decay: 0.0005
+  epochs: 100
+  
+  # GradNorm specific hyperparameters
+  gradnorm_alpha: 0.16
+  loss_weights: [1.0, 1.0, 1.0] # Initial task weights
+
+```
+
+---
+
+### 3. Usage Implementation
+
+In your `src/train.py`, use a simple YAML loader to parse these files. This ensures your research is transparent and other researchers can easily replicate your results.
+
+```python
+import yaml
+
+def load_config(config_path):
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+    return config
+
+# Example: Loading M3 config
+cfg = load_config('config/experiments/M3.yaml')
+print(f"Running experiment: {cfg['experiment_name']}")
+
+```
+
+### Strategic Organization
+
+* **Why split files?** By keeping `dataset.yaml` separate, you ensure that if you add a new camera location or sensor type in the future, you only update one file, rather than touching the model experiment configs.
+* **Ablation Tracking:** By using these specific YAML files, you can automate your ablation study by looping through the `config/experiments/` folder in a bash script:
+```bash
+for f in config/experiments/*.yaml; do
+    python src/train.py --config $f
+done
+
+```
+
+
+
+**Would you like me to provide the Python code that maps these YAML configuration settings directly to your PyTorch model architecture?**
